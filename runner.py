@@ -80,6 +80,8 @@ def runner():
         table.add_row(inp,out)
         console.print(table)
 if __name__ == "__main__":
+#Clear screen
+    subprocess.run("clear",shell = True)    
     print(r"""[blue]\   __________  ____                             
   / ____/ __ \/ __ \__  ______  ____  ___  _____
  / /   / /_/ / /_/ / / / / __ \/ __ \/ _ \/ ___/
