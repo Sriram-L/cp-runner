@@ -20,6 +20,7 @@ parser.add_argument('-t','--testcase', default = 'all', help = 'Testcase#')
 args = parser.parse_args()
 Input = None
 filename = os.path.basename(args.path).rsplit(".",1)[0]
+input_filename = f"{filename}.toml"
 console = Console()
 
 def compiler():
@@ -39,12 +40,12 @@ def parser():
     global Input
     with console.status("[bold blue] Parsing...") as status:
         try:
-            with open("inp.toml",'rb') as file:
+            with open(input_filename,'rb') as file:
                 Input = tom.load(file)
             print("[green]>>>\tParsed input[green]")
         except FileNotFoundError:
             print("[red]>>>\tParsing Error[red]\n")
-            print("inp.toml not found")
+            print("{input_filename} not found")
             sys.exit(0)
         except tom.TOMLDecodeError as e:
             print("[red]\nParsing Error[red]")
