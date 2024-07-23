@@ -24,7 +24,7 @@ input_filename = f"{filename}.toml"
 console = Console()
 
 def compiler():
-    compile_command = f"g++ -std=c++17 -O2 -o {filename} {args.path}"
+    compile_command = f"/opt/homebrew/bin/g++-12 -std=c++17 -O2 -o {filename} {args.path}"
     
     with console.status("[bold blue] Compiling...") as status:
         result = subprocess.run(compile_command,shell = True, capture_output = True, text = True)
@@ -55,7 +55,7 @@ def runner():
     for number,inp in Input.items():
         if args.testcase != "all" and number != args.testcase:
             continue
-        run_command = f"./{filename}" 
+        run_command = f"./{filename} " 
         out = ""
         Time = None
         timeout = False
@@ -75,20 +75,21 @@ def runner():
                 out = "[red]Runtime Error: " + signal_name
             else:
                 out = result.stdout
-        table = Table(title = number, box = box.ASCII, caption = Time, caption_justify = 'right')
+        table = Table(title = number, box = None, caption = Time, caption_justify = 'right')
         table.add_column('Input', justify = 'left' , style = 'white',width = 20)
         table.add_column('Output', justify = 'left' , style = 'white',width = 20)
-        table.add_row(inp,out)
+        table.add_column('Debug logs', justify = 'left' , width = 40)
+        table.add_row(inp,out,result.stderr)
         console.print(table)
 if __name__ == "__main__":
 #Clear screen
     subprocess.run("clear",shell = True)    
-    print(r"""[blue]\   __________  ____                             
-  / ____/ __ \/ __ \__  ______  ____  ___  _____
- / /   / /_/ / /_/ / / / / __ \/ __ \/ _ \/ ___/
-/ /___/ ____/ _, _/ /_/ / / / / / / /  __/ /    
-\____/_/   /_/ |_|\__,_/_/ /_/_/ /_/\___/_/     
-                                                
+    print(r"""[blue]   
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+██ ▄▄▀██ ▄▄ ██ ▄▄▀██ ██ ██ ▀██ ██ ▀██ ██ ▄▄▄██ ▄▄▀
+██ █████ ▀▀ ██ ▀▀▄██ ██ ██ █ █ ██ █ █ ██ ▄▄▄██ ▀▀▄
+██ ▀▀▄██ █████ ██ ██▄▀▀▄██ ██▄ ██ ██▄ ██ ▀▀▀██ ██ 
+▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
           [blue]""")
 #Compiling binary
     compiler()
