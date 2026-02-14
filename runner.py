@@ -261,6 +261,9 @@ class TestRunnerApp(App):
                 continue
             
             self.run_single_test(test_list, name, test)
+            
+            if self.test_results[-1]["status"] == "timeout":
+                break
 
         self.render_detail()
         self.show_summary()
