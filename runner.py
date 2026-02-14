@@ -113,7 +113,6 @@ class TestRunnerApp(App):
     }
 
     #test-list > .test-item:hover {
-        background: #414868;
     }
 
     #test-list > .test-item--focus {
@@ -132,6 +131,16 @@ class TestRunnerApp(App):
         border-title-color: $border-title-color-focus;
     }
 
+    #right-panel {
+        width: 1fr;
+    }
+
+    #debug-panel {
+        height: 10;
+        border: round $border-color-focus;
+        border-title-color: $border-title-color-focus;
+    }
+
     #detail-content {
         height: 1fr;
         padding: 1 2;
@@ -140,6 +149,19 @@ class TestRunnerApp(App):
 
     #detail-content > Static {
         height: auto;
+    }
+
+    #debug-content {
+        padding: 0 1;
+        overflow-y: auto;
+    }
+
+    #debug-content > Static {
+        height: auto;
+    }
+
+    .debug-line {
+        color: #7dcfff;
     }
 
     .detail-label {
@@ -211,18 +233,16 @@ class TestRunnerApp(App):
         Binding("down", "cursor_down", "Down", show=False, priority=True),
         Binding("enter", "toggle_expand", "Expand/Collapse", show=True),
         Binding("tab", "toggle_focus", "Switch Panel", show=True),
-        Binding("v", "toggle_verbose", "Verbose", show=True),
         Binding("q", "quit", "Quit", show=True),
     ]
 
-    def __init__(self, path: str, testcase: str = "all", verbose: bool = False, toml_file: str = None):
+    def __init__(self, path: str, testcase: str = "all", toml_file: str = None):
         super().__init__()
         self.path = path
         self.filename = os.path.basename(path).rsplit(".", 1)[0]
         self.directory = os.path.dirname(os.path.abspath(path))
         self.input_filename = toml_file if toml_file else f"{self.directory}/{self.filename}.toml"
         self.testcase_filter = testcase
-        self.verbose = verbose
         self.test_results = []
         self.focused_index = 0
         self._button_counter = 0
@@ -233,8 +253,11 @@ class TestRunnerApp(App):
             with Container(id="sidebar"):
                 yield Container(id="test-list")
             
-            with Vertical(id="main-panel"):
-                yield ScrollableContainer(id="detail-content")
+            with Vertical(id="right-panel"):
+                with Vertical(id="main-panel"):
+                    yield ScrollableContainer(id="detail-content")
+                with Vertical(id="debug-panel"):
+                    yield ScrollableContainer(id="debug-content")
         
         yield Static("", id="status-bar")
         yield Footer()
@@ -248,6 +271,9 @@ class TestRunnerApp(App):
         
         main_panel = self.query_one("#main-panel")
         main_panel.border_title = "Test Details"
+        
+        debug_panel = self.query_one("#debug-panel")
+        debug_panel.border_title = "Debug Logs"
         
         self.run_tests()
 
@@ -312,6 +338,7 @@ class TestRunnerApp(App):
         run_command = f"{self.directory}/{self.filename}"
         output = ""
         error = ""
+        stderr_output = ""
         time_ms = 0
         status = "pending"
         
@@ -336,9 +363,11 @@ class TestRunnerApp(App):
                     signal_name = f"Signal {-exit_code}"
                 status = "error"
                 error = f"Runtime Error: {signal_name}"
+                stderr_output = result.stderr
             else:
                 output = result.stdout
-                error = result.stderr
+                stderr_output = result.stderr
+                error = ""
                 
                 if expected is not None:
                     import re
@@ -355,6 +384,7 @@ class TestRunnerApp(App):
             status = "timeout"
             time_ms = 5000
             error = "Time Limit Exceeded"
+            stderr_output = ""
 
         test_info = {
             "name": name,
@@ -365,6 +395,7 @@ class TestRunnerApp(App):
             "output": output,
             "expected": expected,
             "error": error,
+            "stderr": stderr_output,
             "expanded": False
         }
         self.test_results.append(test_info)
@@ -401,6 +432,7 @@ class TestRunnerApp(App):
         
         main_panel = self.query_one("#main-panel")
         detail_content = self.query_one("#detail-content")
+        debug_content = self.query_one("#debug-content")
         
         status_icon = {
             "passed": "[#9ece6a]■[/]",
@@ -418,7 +450,7 @@ class TestRunnerApp(App):
         
         main_panel.border_title = f"Test: {test['name']}  [{status_color}]{status_icon}[/{status_color}] {test['status']}  [dim]{test['time_ms']:.1f}ms[/dim]"
         
-        show_expanded = self.verbose or test["status"] != "passed" or test.get("expanded", False)
+        show_expanded = test["status"] != "passed" or test.get("expanded", False)
         
         for child in detail_content.children:
             child.remove()
@@ -441,6 +473,16 @@ class TestRunnerApp(App):
         if test["error"] and test["status"] != "timeout":
             detail_content.mount(Static("[bold red]Error:[/bold red]", classes="detail-label"))
             detail_content.mount(Static(test['error'], classes="code-block error-block"))
+        
+        for child in debug_content.children:
+            child.remove()
+        
+        stderr_output = test.get("stderr", "")
+        if stderr_output:
+            for line in stderr_output.strip().split('\n'):
+                debug_content.mount(Static(f"> {line}", classes="debug-line"))
+        else:
+            debug_content.mount(Static("[dim](no debug output)[/dim]", classes="debug-line"))
 
     def show_summary(self) -> None:
         passed = sum(1 for t in self.test_results if t["status"] == "passed")
@@ -511,12 +553,6 @@ class TestRunnerApp(App):
             self.test_results[self.focused_index]["expanded"] = not self.test_results[self.focused_index].get("expanded", False)
             self.render_detail()
 
-    def action_toggle_verbose(self) -> None:
-        self.verbose = not self.verbose
-        for test in self.test_results:
-            test["expanded"] = self.verbose
-        self.render_detail()
-
     def action_toggle_focus(self) -> None:
         if self.focused_panel == "sidebar":
             self.focused_panel = "detail"
@@ -535,14 +571,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("path", help="Path to file")
     parser.add_argument("-t", "--testcase", default="all", help="Testcase#")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Show full details for all tests")
     parser.add_argument("-i", "--input", default=None, help="Input TOML file (default: filename.toml)")
     args = parser.parse_args()
 
     if not TestRunnerApp.compile(args.path):
         sys.exit(1)
     
-    app = TestRunnerApp(args.path, args.testcase, args.verbose, args.input)
+    app = TestRunnerApp(args.path, args.testcase, args.input)
     app.run()
 
 
