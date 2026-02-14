@@ -152,7 +152,7 @@ class TestRunnerApp(App):
         background: #24283b;
         padding: 0 1;
         margin-bottom: 1;
-        border-left: thick #7aa2f7;
+        border-left: hkey #7aa2f7;
     }
 
     .error-block {
@@ -341,7 +341,10 @@ class TestRunnerApp(App):
                 error = result.stderr
                 
                 if expected is not None:
-                    if output.strip() == expected.strip():
+                    import re
+                    actual_tokens = re.split(r'\s+', output.strip())
+                    expected_tokens = re.split(r'\s+', expected.strip())
+                    if actual_tokens == expected_tokens:
                         status = "passed"
                     else:
                         status = "failed"
