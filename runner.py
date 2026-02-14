@@ -117,8 +117,8 @@ class TestRunnerApp(App):
     }
 
     #test-list > .test-item--focus {
-        background: #7aa2f7;
-        color: #1a1c25;
+        text-style: bold;
+        color: #7aa2f7;
     }
 
     #main-panel {
@@ -143,15 +143,16 @@ class TestRunnerApp(App):
     }
 
     .detail-label {
-        color: $foreground-muted;
+        color: white;
         text-style: bold;
     }
 
     .code-block {
         color: $foreground;
+        background: #24283b;
         padding: 0 1;
         margin-bottom: 1;
-        border-left: solid $panel;
+        border-left: thick #7aa2f7;
     }
 
     .error-block {
@@ -366,17 +367,17 @@ class TestRunnerApp(App):
 
     def render_test_item(self, test_list, test_info):
         status_icon = {
-            "passed": "[green]✓[/green]",
-            "failed": "[red]✗[/red]",
-            "timeout": "[yellow]⏱[/yellow]",
-            "error": "[red]⚠[/red]"
+            "passed": "[#9ece6a]■[/]",
+            "failed": "[#f7768e]■[/]",
+            "timeout": "[#e0af68]■[/]",
+            "error": "[#f7768e]■[/]"
         }.get(test_info["status"], "?")
         
         color = {
-            "passed": "green",
-            "failed": "red",
-            "timeout": "yellow",
-            "error": "orange"
+            "passed": "#9ece6a",
+            "failed": "#f7768e",
+            "timeout": "#e0af68",
+            "error": "#f7768e"
         }.get(test_info["status"], "white")
         
         label = f"[{color}]{status_icon}[/{color}] {test_info['name']:<12} {test_info['time_ms']:>6.0f}ms"
@@ -396,17 +397,17 @@ class TestRunnerApp(App):
         detail_content = self.query_one("#detail-content")
         
         status_icon = {
-            "passed": "[green]✓[/green]",
-            "failed": "[red]✗[/red]",
-            "timeout": "[yellow]⏱[/yellow]",
-            "error": "[red]⚠[/red]"
+            "passed": "[#9ece6a]■[/]",
+            "failed": "[#f7768e]■[/]",
+            "timeout": "[#e0af68]■[/]",
+            "error": "[#f7768e]■[/]"
         }.get(test["status"], "?")
         
         status_color = {
-            "passed": "green",
-            "failed": "red",
-            "timeout": "yellow",
-            "error": "orange"
+            "passed": "#9ece6a",
+            "failed": "#f7768e",
+            "timeout": "#e0af68",
+            "error": "#f7768e"
         }.get(test["status"], "white")
         
         main_panel.border_title = f"Test: {test['name']}  [{status_color}]{status_icon}[/{status_color}] {test['status']}  [dim]{test['time_ms']:.1f}ms[/dim]"
@@ -423,10 +424,15 @@ class TestRunnerApp(App):
             if test["expected"] is not None:
                 detail_content.mount(Static("[bold]Expected:[/bold]", classes="detail-label"))
                 detail_content.mount(Static(test['expected'], classes="code-block"))
-            detail_content.mount(Static("[bold]Output:[/bold]", classes="detail-label"))
-            detail_content.mount(Static(test['output'], classes="code-block"))
+            
+            if test["status"] == "timeout":
+                detail_content.mount(Static("[bold]Output:[/bold]", classes="detail-label"))
+                detail_content.mount(Static("[#e0af68]Time Limit Exceeded[/#e0af68]", classes="code-block"))
+            else:
+                detail_content.mount(Static("[bold]Output:[/bold]", classes="detail-label"))
+                detail_content.mount(Static(test['output'], classes="code-block"))
         
-        if test["error"]:
+        if test["error"] and test["status"] != "timeout":
             detail_content.mount(Static("[bold red]Error:[/bold red]", classes="detail-label"))
             detail_content.mount(Static(test['error'], classes="code-block error-block"))
 
